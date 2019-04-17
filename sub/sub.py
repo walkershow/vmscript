@@ -11,9 +11,14 @@ import datetime
 import os
 import shutil
 import time
-import logging
-import logging.config
+
+# import logging
+# import logging.config
+from loguru import logger
 import dbutil
+# from loguru import logger
+
+logger.add("sub.log", rotation="13:00")
 
 
 def set_ran_times(task_id, times):
@@ -26,7 +31,7 @@ def set_ran_times(task_id, times):
             """.format(
         task_id, times
     )
-    print(sql)
+    logger.info(sql)
     ret = dbutil.execute_sql(sql)
     if ret < 0:
         raise Exception("%s excute error;ret:%d" % (sql, ret))
@@ -56,9 +61,8 @@ def get_running_task():
     where a.id=b.task_id
       and a.status=1
       and b.times>0
-      and b.times>b.ran_times
       """
-    print(sql)
+    logger.info(sql)
     res = dbutil.select_sql(sql)
     if not res or len(res) < 1:
         return []
@@ -78,7 +82,7 @@ def is_task_done(task_id, start_time, end_time):
     """.format(
         start_time, end_time, task_id
     )
-    print(sql)
+    logger.info(sql)
     res = dbutil.select_sql(sql)
     if not res or len(res) < 1:
         return True
@@ -98,19 +102,19 @@ def set_task_done(task_id, order_id, ran_times):
     ;""".format(
         order_id, ran_times
     )
-    print(sql)
+    logger.info(sql)
     ret = dbutil.execute_sql(sql)
     if ret < 0:
         raise Exception("update wrong:{0}".format(order_id))
     sql = """ select allot_times-ran_times from vm_task_allot_impl where order_id={0}""".format(
         order_id
     )
-    print(sql)
+    logger.info(sql)
     res = dbutil.select_sql(sql)
     if not res or len(res) < 1:
         return None
     count = res[0][0]
-    print("id:", task_id, "ran left", " count:", count)
+    logger.info("id:", task_id, "ran left", " count:", count)
     if count != 0:
         set_ran_times(task_id, count)
 
@@ -125,12 +129,12 @@ def get_succ_count(task_id, start_time, end_time):
     """.format(
         start_time, end_time, task_id
     )
-    print(sql)
+    logger.info(sql)
     res = dbutil.select_sql(sql)
     if not res or len(res) < 1:
         return None
     count = res[0][0]
-    print("id:", task_id, "is handling", " count:", count)
+    logger.info("id:", task_id, "is handling", " count:", count)
     return count
 
 
@@ -138,18 +142,18 @@ def get_day_succ_count(task_id):
     sql = """
     select count(*)
     from vm_cur_task
-    where (succ_time is not null or status in(-1,1,2,4))
+    where (succ_time is not null or status in(-1,0,1,2,4))
       and start_time>current_date 
       and cur_task_id={0}
     """.format(
         task_id
     )
-    print(sql)
+    logger.info(sql)
     res = dbutil.select_sql(sql)
     if not res or len(res) < 1:
         return None
     count = res[0][0]
-    print("id:", task_id, "is handling", " count:", count)
+    logger.info("id:", task_id, "is handling", " count:", count)
     return count
 
 
@@ -158,7 +162,7 @@ def set_group_rantimes(task_id):
     sql = """update vm_task_group set ran_times={0} where task_id={1}""".format(
         count, task_id
     )
-    print(sql)
+    logger.info(sql)
     ret = dbutil.execute_sql(sql)
     if ret < 0:
         raise (Exception, "%s excute error;ret:%d" % (sql, ret))
@@ -177,7 +181,7 @@ def get_notdone_task_timerange(task_id, start_time):
     ;""".format(
         task_id, start_time
     )
-    # print(sql)
+    logger.info(sql)
     res = dbutil.select_sql(sql)
     if not res or len(res) < 1:
         return None
@@ -192,7 +196,7 @@ def handle2():
     """
     r_ids = get_running_task()
     for id in r_ids:
-        print("id:", id, "-------------")
+        logger.info("id:", id, "-------------")
         start_time, end_time, now_time, time_id, templ_id = get_time_range(id)
         if start_time is None:
             continue
@@ -200,7 +204,7 @@ def handle2():
             res = get_notdone_task_timerange(id, start_time)
             if res is None:
                 msg = "{0} [{1}] no task not done".format(id, start_time)
-                print(msg)
+                logger.info(msg)
                 continue
             for r in res:
                 done_start_time, done_end_time, order_id = r
@@ -209,13 +213,13 @@ def handle2():
                     msg = "{0} [{1}--{2}]:没有在运行任务,开始统计".format(
                         id, done_start_time, done_end_time
                     )
-                    print(msg)
+                    logger.info(msg)
                     succ_count = get_succ_count(id, done_start_time, done_end_time)
                     set_task_done(id, order_id, succ_count)
                     msg = "{0} [{1}--{2}]:统计结束".format(
                         id, done_start_time, done_end_time
                     )
-                    print(msg)
+                    logger.info(msg)
         else:
             succ_count = get_succ_count(id, start_time, end_time)
             set_ran_times(id, succ_count)
@@ -233,7 +237,7 @@ if __name__ == "__main__":
         try:
             handle2()
         except Exception as e:
-            print(e)
+            logger.info(e)
             time.sleep(20)
             continue
         time.sleep(20)
