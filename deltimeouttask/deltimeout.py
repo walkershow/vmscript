@@ -16,7 +16,7 @@ import logging.config
 import dbutil
 
     
-def handle():
+def handle2():
     sql = "delete from vm_cur_task where status =1 and \
     UNIX_TIMESTAMP(NOW())-UNIX_TIMESTAMP(start_time)>2400"
     ret = dbutil.execute_sql(sql)
@@ -27,6 +27,25 @@ def handle():
     print(sql, ret)
     sql = "delete from vm_cur_task where status =2 and \
     UNIX_TIMESTAMP(NOW())-UNIX_TIMESTAMP(succ_time)>1200"
+    ret = dbutil.execute_sql(sql)
+    print(sql, ret)
+        
+
+def handle():
+    sql = "update vm_cur_task set status=30 where status =1 and \
+    UNIX_TIMESTAMP(NOW())-UNIX_TIMESTAMP(start_time)>2400"
+    ret = dbutil.execute_sql(sql)
+    print(sql, ret)
+    sql = "update vm_cur_task set status=30 where status =-1 and \
+    UNIX_TIMESTAMP(NOW())-UNIX_TIMESTAMP(start_time)>180"
+    ret = dbutil.execute_sql(sql)
+    print(sql, ret)
+    sql = "update vm_cur_task set status=30 where status =2 and \
+    UNIX_TIMESTAMP(NOW())-UNIX_TIMESTAMP(succ_time)>1200"
+    ret = dbutil.execute_sql(sql)
+    print(sql, ret)
+    sql = "update vm_cur_task set status=30 where status =0 and \
+    UNIX_TIMESTAMP(NOW())-UNIX_TIMESTAMP(start_time)>1200"
     ret = dbutil.execute_sql(sql)
     print(sql, ret)
         
